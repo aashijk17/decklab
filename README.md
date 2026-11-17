@@ -183,6 +183,7 @@ site a plain static folder:
   download them, so very long recordings need plenty of RAM.
 - **No headphone cueing.** There is a single stereo output; pre-listening on
   headphones needs a multi-channel sound card and isn't implemented.
-- **Spotify import** has not been tested against a live account in this
-  build (it needs your own Client ID); it handles missing fields and API
-  errors without crashing, but Spotify changes its API rules from time to time.
+- **Spotify import only reads playlists you own or collaborate on.** Spotify
+  returns "Forbidden" for playlists you merely follow; DeckLab lists those
+  last, labelled "followed". To import one, add its tracks to a playlist of
+  your own in Spotify first.
