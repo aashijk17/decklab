@@ -4,6 +4,9 @@
 import { getTrack, putTrack } from './db.js';
 import { readTags } from './tags.js';
 
+// Bump when the analysis changes: older cached results are then re-analysed
+// (hot cues and cue points are kept).
+const ANALYSIS_VERSION = 2;
 const AUDIO_EXT = /\.(mp3|wav|wave|flac|aac|m4a|mp4|ogg|oga|opus|aif|aiff)$/i;
 
 export class Library extends EventTarget {
@@ -39,10 +42,11 @@ export class Library extends EventTarget {
         hotcues: new Array(8).fill(null), cue: 0, status: 'queued',
       };
       const cached = await getTrack(id);
-      if (cached && cached.wave) {
+      if (cached && cached.wave && cached.av === ANALYSIS_VERSION) {
         Object.assign(track, cached, { file, status: 'ready' });
         if (!track.hotcues) track.hotcues = new Array(8).fill(null);
       } else {
+        if (cached) { track.hotcues = cached.hotcues || track.hotcues; track.cue = cached.cue || 0; }
         this.queue.push(track);
       }
       this.tracks.push(track); this.byId.set(id, track);
@@ -104,7 +108,7 @@ export class Library extends EventTarget {
       if (!track.bpm) track.bpm = r.bpm;
       track.gridOffset = track.gridOffset || r.gridOffset;
       track.key = r.key; track.camelot = r.camelot; track.wave = r.wave;
-      track.status = 'ready';
+      track.status = 'ready'; track.av = ANALYSIS_VERSION;
       this.save(track);
     } catch (err) {
       track.status = 'error';

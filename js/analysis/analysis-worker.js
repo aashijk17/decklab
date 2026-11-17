@@ -25,9 +25,9 @@ function computeWave(x, sr) {
       const l = Math.abs(lp1), m = Math.abs(lp2 - lp1), h = Math.abs(v - lp2);
       if (l > pl) pl = l; if (m > pm) pm = m; if (h > ph) ph = h;
     }
-    low[p] = Math.min(255, pl * 255 * 1.1);
-    mid[p] = Math.min(255, pm * 255 * 1.5);
-    high[p] = Math.min(255, ph * 255 * 2.2);
+    low[p] = Math.min(255, pl * 255 * 1.0);
+    mid[p] = Math.min(255, pm * 255 * 1.2);
+    high[p] = Math.min(255, ph * 255 * 1.5);
   }
   return { rate: WAVE_RATE, low, mid, high };
 }
@@ -72,11 +72,12 @@ function detectTempo(y, sr) {
   };
   const sF = smooth(eF), sL = smooth(eL);
   // Onset strength: how sharply the energy rises.
-  const on = new Float32Array(N);
-  let mean = 0;
+  const on = new Float32Array(N), onLow = new Float32Array(N);
+  let mean = 0, lowSum = 0;
   for (let n = 2; n < N; n++) {
-    on[n] = Math.max(0, sF[n] - sF[n - 2]) + 1.5 * Math.max(0, sL[n] - sL[n - 2]);
-    mean += on[n];
+    onLow[n] = Math.max(0, sL[n] - sL[n - 2]);
+    on[n] = Math.max(0, sF[n] - sF[n - 2]) + 1.5 * onLow[n];
+    mean += on[n]; lowSum += onLow[n];
   }
   mean /= N;
   if (mean < 1e-6) return { bpm: 0, gridOffset: 0 };
@@ -125,25 +126,51 @@ function detectTempo(y, sr) {
     L = p / k;
   }
   let bpm = (fr * 60) / L;
-  if (Math.abs(bpm - Math.round(bpm)) < 0.06) bpm = Math.round(bpm);
-  else if (Math.abs(bpm * 2 - Math.round(bpm * 2)) < 0.06) bpm = Math.round(bpm * 2) / 2;
+  // Only snap to a whole number when we are practically on it: a grid that is
+  // 0.05 BPM out drifts audibly within a minute.
+  if (Math.abs(bpm - Math.round(bpm)) < 0.02) bpm = Math.round(bpm);
   else bpm = Math.round(bpm * 100) / 100;
 
-  // Beat phase: fold every onset into one beat period and find where they pile up.
-  const P = (fr * 60) / bpm, nb = Math.max(8, Math.round(P));
-  const hist = new Float64Array(nb);
-  for (let n = 0; n < N; n++) {
-    if (on[n] <= 0) continue;
-    const ph = n / P;
-    hist[Math.min(nb - 1, Math.floor((ph - Math.floor(ph)) * nb))] += on[n];
+  // Fine-tune tempo and find the beat phase from the kick drum (bass onsets).
+  // Every onset is treated as a point on a clock face that turns once per beat:
+  // at the right tempo the points bunch up on one side, and the direction they
+  // bunch in is the beat phase. Unlike a sharp histogram this tolerates the
+  // small tempo drift of real recordings.
+  const src = lowSum > mean * N * 0.05 ? onLow : on;
+  const idx = [], wt = [];
+  for (let n = 1; n < N - 1; n++) {
+    if (src[n] > 0 && src[n] >= src[n - 1] && src[n] > src[n + 1]) { idx.push(n); wt.push(src[n]); }
   }
-  let bb = 0, bv = -1;
-  for (let b = 0; b < nb; b++) {
-    const v = hist[(b + nb - 1) % nb] + 2 * hist[b] + hist[(b + 1) % nb];
-    if (v > bv) { bv = v; bb = b; }
+  const clock = (tempo) => {
+    const k = (2 * Math.PI * tempo) / (fr * 60);
+    let c = 0, s2 = 0;
+    for (let i = 0; i < idx.length; i++) { const a2 = idx[i] * k; c += wt[i] * Math.cos(a2); s2 += wt[i] * Math.sin(a2); }
+    return { r: Math.hypot(c, s2), ang: Math.atan2(s2, c) };
+  };
+  let top = clock(bpm), topBpm = bpm;
+  for (let c = bpm - 0.6; c <= bpm + 0.6001; c += 0.005) {
+    const f = clock(c);
+    if (f.r > top.r * 1.02) { top = f; topBpm = c; }
   }
+  bpm = Math.abs(topBpm - Math.round(topBpm)) < 0.012 ? Math.round(topBpm) : Math.round(topBpm * 100) / 100;
+  const ang = clock(bpm).ang;
   const beatSec = 60 / bpm;
   // The onset detector answers slightly after the true attack; compensate.
+  // The clock gives a robust rough phase; sharpen it to the exact attack by
+  // taking the tallest pile of onsets within a fifth of a beat of it.
+  const P = (fr * 60) / bpm, nb = Math.max(8, Math.round(P));
+  const hist = new Float64Array(nb);
+  for (let i = 0; i < idx.length; i++) {
+    const ph = idx[i] / P;
+    hist[Math.min(nb - 1, Math.floor((ph - Math.floor(ph)) * nb))] += wt[i];
+  }
+  const centre = ((((ang / (2 * Math.PI)) % 1) + 1) % 1) * nb, reach = Math.max(2, Math.round(nb * 0.2));
+  let bb = Math.round(centre) % nb, bv = -1;
+  for (let d = -reach; d <= reach; d++) {
+    const b2 = (((Math.round(centre) + d) % nb) + nb) % nb;
+    const v = hist[(b2 + nb - 1) % nb] + 2 * hist[b2] + hist[(b2 + 1) % nb];
+    if (v > bv) { bv = v; bb = b2; }
+  }
   let off = (((bb + 0.5) / nb) * P * H) / sr - ONSET_LATENCY;
   off = ((off % beatSec) + beatSec) % beatSec;
   return { bpm, gridOffset: off };

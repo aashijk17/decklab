@@ -9,7 +9,7 @@ export function initLearn(app) {
     const on = !!app.settings.learn;
     document.body.classList.toggle('learn', on);
     btn.classList.toggle('on', on);
-    btn.textContent = `Learning mode: ${on ? 'ON' : 'OFF'}`;
+    btn.lastElementChild.textContent = `Learning mode: ${on ? 'ON' : 'OFF'}`;
     if (!on) hide();
   };
   const hide = () => { tip.classList.add('hidden'); current = null; };

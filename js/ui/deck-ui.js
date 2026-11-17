@@ -2,8 +2,9 @@
 
 import { makeKnob, makeFader, setText, setClass, fmtTime } from './controls.js';
 import { FX_NAMES } from '../audio/fx.js';
+import { IC } from './icons.js';
 
-export const PAD_COLORS = ['#ff3d5a', '#ff9a1f', '#ffe01f', '#37e07a', '#1fd6ff', '#4a7dff', '#b46bff', '#ff62d0'];
+export const PAD_COLORS = ['#fb3f6c', '#fb923c', '#fde047', '#34f5c5', '#22d3ee', '#6366f1', '#a855f7', '#f472b6'];
 const LOOP_SIZES = [0.25, 0.5, 1, 2, 4, 8, 16, 32];
 const ROLL_SIZES = [1 / 16, 1 / 8, 1 / 4, 1 / 2, 1, 2, 4, 8];
 const RANGES = [0.08, 0.16, 0.5];
@@ -52,7 +53,7 @@ export class DeckUI {
     const id = this.deck.id;
     this.root.innerHTML = `
       <div class="deck-head">
-        <div class="badge">${id}</div>
+        <div class="disc">${id}</div>
         <div class="tinfo"><div class="ttitle"></div><div class="tartist"></div></div>
         <div class="tkey" data-tip="${TIPS.key}"><b class="camelot">–</b><span class="keyname">KEY</span></div>
         <div class="tbpm" data-tip="${TIPS.bpm}"><b class="bpmval">–</b><span class="bpmorig">BPM</span></div>
@@ -62,9 +63,9 @@ export class DeckUI {
       <div class="deck-body">
         <div class="transport">
           <div class="beatleds" data-tip="Beat counter: lights 1-2-3-4 with the beat. Dance music is built in groups of 4 beats (a bar)."><i></i><i></i><i></i><i></i></div>
-          <button class="tbtn sync" data-tip="${TIPS.sync}">SYNC</button>
-          <button class="tbtn cue" data-tip="${TIPS.cue}">CUE</button>
-          <button class="tbtn play" data-tip="${TIPS.play}">▶❙❙</button>
+          <button class="tbtn sync" data-tip="${TIPS.sync}">${IC.sync}SYNC</button>
+          <button class="tbtn cue" data-tip="${TIPS.cue}">${IC.cue}CUE</button>
+          <button class="tbtn play" data-tip="${TIPS.play}">${IC.play}${IC.pause}</button>
         </div>
         <div class="deck-mid">
           <div class="row">
@@ -75,8 +76,8 @@ export class DeckUI {
             <button class="btn xs gridhere" data-tip="${TIPS.grid}">GRID◆</button>
             <span class="sp"></span>
             <span class="lbl">NUDGE</span>
-            <button class="btn xs nudgedn" data-tip="${TIPS.nudge}">◀ −</button>
-            <button class="btn xs nudgeup" data-tip="${TIPS.nudge}">+ ▶</button>
+            <button class="btn xs nudgedn" data-tip="${TIPS.nudge}">${IC.back}</button>
+            <button class="btn xs nudgeup" data-tip="${TIPS.nudge}">${IC.fwd}</button>
           </div>
           <div class="padmodes" data-tip="${TIPS.pads}">
             <button data-mode="hot" class="active">HOT CUE</button>
@@ -86,7 +87,7 @@ export class DeckUI {
           <div class="pads" data-tip="${TIPS.pads}">${Array.from({ length: 8 }, (_, i) => `<button class="pad" data-i="${i}" style="--pc:${PAD_COLORS[i]}"></button>`).join('')}</div>
           <div class="row looprow" data-tip="${TIPS.loop}">
             <button class="btn xs lin">IN</button><button class="btn xs lout">OUT</button>
-            <button class="btn xs lre">RELOOP / EXIT</button>
+            <button class="btn xs lre">${IC.loop}RELOOP / EXIT</button>
             <button class="btn xs lhalf">½</button><button class="btn xs ldbl">×2</button>
             <span class="loopinfo">NO LOOP</span>
           </div>
@@ -95,7 +96,7 @@ export class DeckUI {
         <div class="tempo-col">
           <button class="btn xs range" data-tip="${TIPS.range}">±8%</button>
           <div class="tempoval">0.00%</div>
-          <button class="btn xs keylock" data-tip="${TIPS.keylock}">KEY LOCK</button>
+          <button class="btn xs keylock" data-tip="${TIPS.keylock}">${IC.lock}KEY</button>
         </div>
       </div>`;
 
@@ -103,6 +104,7 @@ export class DeckUI {
     this.el = {};
     for (const c of ['ttitle', 'tartist', 'camelot', 'keyname', 'bpmval', 'bpmorig', 'elapsed', 'remain',
       'sync', 'cue', 'play', 'loopinfo', 'tempoval', 'range', 'keylock', 'lre', 'overview']) this.el[c] = this.$('.' + c);
+    this.disc = this.$('.disc');
     this.leds = [...this.root.querySelectorAll('.beatleds i')];
     this.pads = [...this.root.querySelectorAll('.pad')];
 
@@ -266,6 +268,12 @@ export class DeckUI {
     setText(el.tempoval, `${d.tempo >= 0 ? '+' : ''}${(d.tempo * 100).toFixed(2)}%`);
     const fv = 0.5 - d.tempo / (2 * d.range);
     if (Math.abs(fv - this.tempoFader.get()) > 1e-4) this.tempoFader.set(fv, false);
+
+    // spinning record (33 rpm) and a glow that pulses on every beat
+    if (d.loaded) this.disc.style.transform = `rotate(${((pos * 200) % 360).toFixed(1)}deg)`;
+    const bp = d.beatPos(pos);
+    const pulse = d.playing && d.bpm ? Math.pow(1 - (bp - Math.floor(bp)), 2.5) : 0;
+    if (pulse !== this._pulse) { this._pulse = pulse; this.root.style.setProperty('--beat', pulse.toFixed(2)); }
 
     // beat LEDs
     const beat = d.bpm && t ? ((Math.floor(d.beatPos(pos)) % 4) + 4) % 4 : -1;

@@ -11,6 +11,7 @@ import { LibraryUI, DRAG_TYPE } from './ui/library-ui.js';
 import { initShortcuts, cheatsheetHtml } from './ui/shortcuts.js';
 import { initLearn, GUIDE_HTML } from './ui/learn.js';
 import { setText, setClass, fmtTime } from './ui/controls.js';
+import { decorate } from './ui/icons.js';
 import * as spotify from './spotify.js';
 
 const LS_SETTINGS = 'decklab.settings';
@@ -81,8 +82,8 @@ async function start() {
 
   // ---------- build UI ----------
   const waves = {
-    A: new WaveView($('waveA'), decks.A, '#2ab7ff'),
-    B: new WaveView($('waveB'), decks.B, '#ff7d1f'),
+    A: new WaveView($('waveA'), decks.A, '#22d3ee'),
+    B: new WaveView($('waveB'), decks.B, '#f472b6'),
   };
   if ([75, 150, 300].includes(settings.zoom)) waves.A.pps = waves.B.pps = settings.zoom;
   app.deckUIs.A = new DeckUI($('deckA'), decks.A, app);
@@ -93,6 +94,7 @@ async function start() {
   };
   app.mixerUI = new MixerUI($('mixer'), app);
   app.libraryUI = new LibraryUI(app);
+  decorate();
   initShortcuts(app);
   initLearn(app);
 
@@ -149,10 +151,10 @@ async function start() {
   dlMp3.addEventListener('click', async () => {
     dlMp3.disabled = true;
     try {
-      const blob = await recorder.mp3Blob((p) => { dlMp3.textContent = `${Math.round(p * 100)}%`; });
+      const blob = await recorder.mp3Blob((p) => { dlMp3.lastElementChild.textContent = `${Math.round(p * 100)}%`; });
       download(blob, `decklab-mix-${stamp()}.mp3`);
     } catch (e) { toast(e.message, 'err'); }
-    dlMp3.textContent = 'MP3'; dlMp3.disabled = false;
+    dlMp3.lastElementChild.textContent = 'MP3'; dlMp3.disabled = false;
   });
   window.addEventListener('beforeunload', (e) => { if (recorder.recording) { e.preventDefault(); e.returnValue = ''; } });
 
@@ -193,7 +195,7 @@ async function start() {
 
     setClass(recBtn, 'on', recorder.recording);
     setClass(recTime, 'on', recorder.recording);
-    setText(recBtn, recorder.recording ? '■ STOP' : '● REC');
+    setText(recBtn.lastElementChild, recorder.recording ? 'STOP' : 'REC');
     setText(recTime, fmtTime(recorder.elapsed, false).padStart(5, '0'));
     requestAnimationFrame(frame);
   }

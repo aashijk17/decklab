@@ -3,7 +3,11 @@
 
 import { PAD_COLORS } from './deck-ui.js';
 
-const BANDS = [['low', '#1f63ff', 1.0], ['mid', '#ff9a26', 0.9], ['high', '#f4f7ff', 0.75]];
+// Each deck draws bass / mids / highs in its own colour family.
+export const PALETTES = {
+  A: [['low', '#1d4ed8', 1.0], ['mid', '#22d3ee', 0.72], ['high', '#ecfeff', 0.42]],
+  B: [['low', '#7c3aed', 1.0], ['mid', '#f472b6', 0.72], ['high', '#fff0f8', 0.42]],
+};
 
 function fit(canvas) {
   const dpr = window.devicePixelRatio || 1;
@@ -19,6 +23,7 @@ function fit(canvas) {
 export class WaveView {
   constructor(canvas, deck, color) {
     this.canvas = canvas; this.deck = deck; this.color = color;
+    this.bands = PALETTES[deck.id];
     this.pps = 150;    // pixels per second of real time
     // Drag the waveform to scrub through the track.
     let lastX = 0;
@@ -36,7 +41,7 @@ export class WaveView {
     g.clearRect(0, 0, w, h);
     g.fillStyle = this.color; g.fillRect(0, 0, 3, h);
     if (!t) {
-      g.fillStyle = '#56616e'; g.font = '12px system-ui'; g.textAlign = 'center';
+      g.fillStyle = '#6a70b0'; g.font = '13px system-ui'; g.textAlign = 'center';
       g.fillText(`Deck ${d.id} — drag a track here`, w / 2, mid + 4);
       return;
     }
@@ -47,7 +52,7 @@ export class WaveView {
 
     const lp = d.loop;
     if (lp.in != null && lp.out != null) {
-      g.fillStyle = lp.on ? '#37e07a38' : '#ffffff14';
+      g.fillStyle = lp.on ? '#34f5c540' : '#ffffff14';
       g.fillRect(xOf(lp.in), 0, (lp.out - lp.in) / spp, h);
     }
 
@@ -57,7 +62,7 @@ export class WaveView {
       const c = pos * wave.rate;
       const i0 = Math.max(0, Math.floor(c - (w / 2) * step)), i1 = Math.min(n - 1, Math.ceil(c + (w / 2) * step));
       const bw = Math.max(1, 1 / step) + 0.3;
-      for (const [band, col, sc] of BANDS) {
+      for (const [band, col, sc] of this.bands) {
         const arr = wave[band];
         g.fillStyle = col; g.beginPath();
         for (let i = i0; i <= i1; i++) {
@@ -94,11 +99,12 @@ export class WaveView {
       g.fillStyle = '#000'; g.font = 'bold 9px system-ui'; g.textAlign = 'center';
       g.fillText(label, x + 6.5, 9);
     };
-    marker(d.cue, '#ffb300', 'C');
+    marker(d.cue, '#c4b5fd', 'C');
     (t.hotcues || []).forEach((hc, i) => { if (hc != null) marker(hc, PAD_COLORS[i], String(i + 1)); });
 
     // playhead
-    g.fillStyle = '#ff3d52'; g.fillRect(w / 2 - 1, 0, 2, h);
+    g.fillStyle = '#ffffff'; g.shadowColor = this.color; g.shadowBlur = 12;
+    g.fillRect(w / 2 - 1, 0, 2, h); g.shadowBlur = 0;
   }
 }
 
@@ -114,7 +120,7 @@ export class Overview {
     const g = this.cache.getContext('2d');
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     const n = wave.low.length, per = n / w, mid = h / 2;
-    for (const [band, col, sc] of BANDS) {
+    for (const [band, col, sc] of PALETTES[this.deck.id]) {
       const arr = wave[band];
       g.fillStyle = col; g.beginPath();
       for (let x = 0; x < w; x++) {
@@ -143,10 +149,10 @@ export class Overview {
     g.fillStyle = '#000000a0'; g.fillRect(0, 0, px, h);
     const lp = d.loop;
     if (lp.in != null && lp.out != null) {
-      g.fillStyle = lp.on ? '#37e07a66' : '#ffffff30';
+      g.fillStyle = lp.on ? '#34f5c566' : '#ffffff30';
       g.fillRect(xOf(lp.in), 0, Math.max(2, xOf(lp.out) - xOf(lp.in)), h);
     }
-    g.fillStyle = '#ffb300'; g.fillRect(xOf(d.cue) - 1, h - 8, 2, 8);
+    g.fillStyle = '#c4b5fd'; g.fillRect(xOf(d.cue) - 1, h - 8, 2, 8);
     (t.hotcues || []).forEach((hc, i) => {
       if (hc == null) return;
       g.fillStyle = PAD_COLORS[i]; g.fillRect(xOf(hc) - 1, 0, 3, 9);
