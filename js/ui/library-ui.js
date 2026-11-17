@@ -206,12 +206,23 @@ export class LibraryUI {
 
     if (tracks.length) {
       const owned = tracks.filter((t) => this.lib.tracks.some((l) => spotify.matches(t, l))).length;
-      frag.append(el('div', 'crate-note', `“${this.crate.name}” — ${owned} of ${tracks.length} tracks owned. Add matching audio files to your library and they are ticked off automatically.`));
+      frag.append(el('div', 'crate-note', `“${this.crate.name}” — ${owned} of ${tracks.length} tracks owned. These are Spotify listings for planning — they have no audio, so a TO GET track can't go on a deck. Get the track as a file (MP3, WAV, FLAC, M4A), drop the file anywhere on this page, and it turns OWNED and can be dragged onto a deck.`));
       for (const t of tracks) {
         const row = el('div', 'ct');
         if (t.art) { const img = el('img'); img.src = t.art; img.loading = 'lazy'; img.alt = ''; row.append(img); }
         else row.append(el('div', 'noart'));
-        const have = this.lib.tracks.some((l) => spotify.matches(t, l));
+        const local = this.lib.tracks.find((l) => spotify.matches(t, l));
+        const have = !!local;
+        row.draggable = true;
+        row.addEventListener('dragstart', (e) => {
+          if (local) {
+            e.dataTransfer.setData(DRAG_TYPE, local.id); e.dataTransfer.setData('text/plain', local.title);
+            e.dataTransfer.effectAllowed = 'copy';
+          } else {
+            e.preventDefault();
+            this.app.toast(`“${t.title}” is only a Spotify listing — Spotify audio can't be mixed. Add the track as an audio file (drop the file on this page), then drag it from the Library onto a deck.`);
+          }
+        });
         const link = el('div');
         if (t.url) { const a = el('a', '', 'Open in Spotify'); a.href = t.url; a.target = '_blank'; a.rel = 'noopener'; link.append(a); }
         row.append(el('div', 't', t.title), el('div', 'ar', t.artist || 'Unknown artist'),
