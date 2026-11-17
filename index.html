@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DeckLab — learn to DJ in your browser</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header id="topbar">
+  <div class="brand"><span class="brand-dot"></span>DECK<b>LAB</b></div>
+
+  <div class="tb-group">
+    <button id="recBtn" class="btn rec" data-tip="Record your mix. Everything you hear on the master output is captured. Press again to stop, then download it as WAV or MP3.">● REC</button>
+    <span id="recTime" class="rec-time">00:00</span>
+    <button id="dlWav" class="btn sm" disabled data-tip="Download the last recording as an uncompressed WAV file (best quality, large).">WAV</button>
+    <button id="dlMp3" class="btn sm" disabled data-tip="Download the last recording as a 192 kbps MP3 (smaller, easy to share).">MP3</button>
+  </div>
+
+  <div class="tb-group" id="masterGroup">
+    <div class="master-meter" data-tip="Master level: the loudness of your final mix. Aim for the top of the green/yellow. If CLIP lights up the mix is distorting — turn down the channel trims or the master.">
+      <div class="mm"><i id="mmL"></i></div>
+      <div class="mm"><i id="mmR"></i></div>
+    </div>
+    <span id="clipLed" class="clip">CLIP</span>
+  </div>
+
+  <div class="tb-spacer"></div>
+
+  <div class="tb-group">
+    <button id="learnBtn" class="btn" title="Show an explanation when you hover over any control">Learning mode: OFF</button>
+    <button id="guideBtn" class="btn">DJ basics</button>
+    <button id="helpBtn" class="btn">? Shortcuts</button>
+  </div>
+</header>
+
+<section id="waves">
+  <div class="wave-row" data-deck="A"><canvas id="waveA"></canvas></div>
+  <div id="phase" data-tip="Beat-phase meter. The dot shows how far deck B's beats are from deck A's. Dead centre (green) = the beats land together. If the dot drifts, use the NUDGE buttons to push it back to the centre — that is beatmatching.">
+    <span class="ph-lbl" id="phInfoA"></span>
+    <div class="ph-track"><div class="ph-center"></div><div class="ph-dot" id="phDot"></div></div>
+    <span class="ph-lbl r" id="phInfoB"></span>
+    <div class="zoom">
+      <button id="zoomOut" class="btn xs" title="Zoom waveforms out">−</button>
+      <button id="zoomIn" class="btn xs" title="Zoom waveforms in">+</button>
+    </div>
+  </div>
+  <div class="wave-row" data-deck="B"><canvas id="waveB"></canvas></div>
+</section>
+
+<main id="console">
+  <section id="deckA" class="deck" data-deck="A"></section>
+  <section id="mixer"></section>
+  <section id="deckB" class="deck" data-deck="B"></section>
+</main>
+
+<section id="browser">
+  <div class="br-bar">
+    <button class="tab active" data-tab="lib">Library <span id="libCount" class="count"></span></button>
+    <button class="tab" data-tab="crate">Crate / To-Get <span id="crateCount" class="count"></span></button>
+    <div class="br-tools" id="libTools">
+      <input id="search" type="search" placeholder="Search title, artist, key…" autocomplete="off">
+      <button id="addFiles" class="btn sm" data-tip="Pick music files from your computer (MP3, WAV, FLAC, AAC/M4A). They are read locally by your browser and never uploaded.">+ Add files</button>
+      <button id="addFolder" class="btn sm" data-tip="Add a whole folder of music at once.">+ Add folder</button>
+      <input type="file" id="fileInput" hidden multiple accept="audio/*,.mp3,.wav,.flac,.aac,.m4a,.ogg">
+      <input type="file" id="dirInput" hidden webkitdirectory>
+    </div>
+  </div>
+
+  <div class="br-panel" id="panel-lib">
+    <table id="libTable">
+      <thead><tr>
+        <th class="c-load">Load</th>
+        <th data-sort="title">Title</th>
+        <th data-sort="artist">Artist</th>
+        <th data-sort="duration" class="num">Time</th>
+        <th data-sort="bpm" class="num">BPM</th>
+        <th data-sort="camelot">Key</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+    <div id="libEmpty" class="empty">
+      <b>Drop music files anywhere on this page</b>
+      <span>MP3 · WAV · FLAC · AAC/M4A — files stay on your computer, nothing is uploaded.<br>
+      Then drag a track onto a deck (or use the A / B buttons).</span>
+    </div>
+  </div>
+
+  <div class="br-panel hidden" id="panel-crate"></div>
+</section>
+
+<div id="dropzone" class="hidden"><div>Drop audio files to add them to your library</div></div>
+<div id="overlay" class="hidden"><div class="modal"><button class="modal-x" aria-label="Close">×</button><div id="modalBody"></div></div></div>
+<div id="tip" class="hidden"></div>
+<div id="toasts"></div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
