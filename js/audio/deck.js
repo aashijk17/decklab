@@ -195,7 +195,11 @@ export class Deck {
 
   alignPhase(other) {
     if (!this.bpm || !other.bpm || !other.playing) return;
-    this.jumpBy(this.phaseOffsetTo(other, true) * this.beatLen);
+    let d = this.phaseOffsetTo(other, true) * this.beatLen;
+    // Can't jump to before the start (or past the end): go one beat the other way.
+    const p = this.rawPos() / this.sr;
+    if (p + d < 0) d += this.beatLen; else if (p + d > this.duration - 0.05) d -= this.beatLen;
+    this.jumpBy(d);
   }
 
   // Match tempo to the other deck and line the beats up. Returns false if impossible.

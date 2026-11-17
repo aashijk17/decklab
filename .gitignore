@@ -1,2 +1,12 @@
 .claude/
 .DS_Store
+
+# Never publish music files
+*.mp3
+*.wav
+*.flac
+*.m4a
+*.aac
+*.ogg
+Rastaman Vibration/
+*.mp4
