@@ -138,7 +138,11 @@ export class LibraryUI {
   async loadPlaylists() {
     this.crateBusy = 'Loading your playlists…'; this.renderCrate();
     try {
-      [this.playlists, this.user] = await Promise.all([spotify.playlists(), spotify.me()]);
+      const [lists, who] = await Promise.all([spotify.playlists(), spotify.me()]);
+      this.user = who.name;
+      // Spotify only lets apps like this read playlists you own or collaborate on.
+      for (const p of lists) p.mine = !who.id || !p.ownerId || p.ownerId === who.id || p.collaborative;
+      this.playlists = [...lists.filter((p) => p.mine), ...lists.filter((p) => !p.mine)];
       this.crateBusy = '';
     } catch (e) {
       this.playlists = null; this.crateBusy = '';
@@ -156,9 +160,9 @@ export class LibraryUI {
       this.crate = { id, name: pl.name, tracks };
       this.saveCrate();
     } catch (e) {
-      const hint = e.status === 403 || e.status === 404
-        ? ' Spotify only lets apps in development mode read some playlists (usually ones you own or collaborate on).' : '';
-      this.app.toast(`Could not load that playlist: ${e.message}.${hint}`, 'err');
+      if (e.status === 403 || e.status === 404) {
+        this.app.toast(`Spotify won't let this app read “${pl.name}” — it only allows playlists you own or collaborate on. Tip: in Spotify, add its tracks to a playlist of your own, then import that.`, 'err');
+      } else this.app.toast(`Could not load that playlist: ${e.message}`, 'err');
     }
     this.crateBusy = ''; this.renderCrate();
   }
@@ -186,7 +190,10 @@ export class LibraryUI {
     } else {
       const sel = el('select');
       sel.append(new Option(this.playlists ? 'Choose a playlist…' : 'Playlists not loaded', ''));
-      for (const p of this.playlists || []) sel.append(new Option(p.count != null ? `${p.name} (${p.count})` : p.name, p.id));
+      for (const p of this.playlists || []) {
+        const label = p.count != null ? `${p.name} (${p.count})` : p.name;
+        sel.append(new Option(p.mine ? label : `${label} — followed, Spotify may block it`, p.id));
+      }
       if (this.crate && (this.playlists || []).some((p) => p.id === this.crate.id)) sel.value = this.crate.id;
       sel.addEventListener('change', () => sel.value && this.pickPlaylist(sel.value));
       const refresh = el('button', 'btn sm', 'Reload playlists');

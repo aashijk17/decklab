@@ -112,13 +112,14 @@ async function paged(first, max = 2000) {
 }
 
 export async function me() {
-  try { const j = await api('/me'); return j.display_name || j.id || ''; } catch { return ''; }
+  try { const j = await api('/me'); return { name: j.display_name || j.id || '', id: j.id || '' }; } catch { return { name: '', id: '' }; }
 }
 
 export async function playlists() {
   const items = await paged('/me/playlists?limit=50');
   return items.filter(Boolean).map((p) => ({
     id: p.id, name: p.name || '(untitled playlist)',
+    ownerId: (p.owner && p.owner.id) || '', collaborative: !!p.collaborative,
     // Spotify has renamed this field over time; accept either shape.
     count: (p.tracks && p.tracks.total) ?? (p.items && p.items.total) ?? null,
   }));
